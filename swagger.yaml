@@ -1,0 +1,644 @@
+
+openapi: 3.0.3
+info:
+  title: Jibble Data API
+  description: API for retrieving statistics and data from the Jibble database, including employee counts, login statistics, and manager performance.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000/api
+    description: Local development server
+paths:
+  /stats:
+    get:
+      summary: Get overall statistics
+      description: Retrieves statistics including total headcount, logged-in employees, and login percentage for a specific date, optionally filtered by manager, group name, or state.
+      parameters:
+        - name: date
+          in: query
+          description: Date in DD-MM-YYYY format (defaults to current date)
+          required: false
+          schema:
+            type: string
+            example: "27-04-2025"
+        - name: manager
+          in: query
+          description: Full name of the manager to filter by
+          required: false
+          schema:
+            type: string
+            example: "John Doe"
+        - name: groupName
+          in: query
+          description: Group name (station code) to filter by
+          required: false
+          schema:
+            type: string
+            example: "ABC"
+        - name: state
+          in: query
+          description: State to filter by (maps to station codes)
+          required: false
+          schema:
+            type: string
+            example: "California"
+      responses:
+        '200':
+          description: Successful response with statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /stations:
+    get:
+      summary: Get station-level statistics
+      description: Retrieves detailed statistics for each station, including employee count, logged-in count, work duration, overtime, and state, optionally filtered by date, manager, group name, or state.
+      parameters:
+        - name: date
+          in: query
+          description: Date in DD-MM-YYYY format (defaults to current date)
+          required: false
+          schema:
+            type: string
+            example: "27-04-2025"
+        - name: manager
+          in: query
+          description: Full name of the manager to filter by
+          required: false
+          schema:
+            type: string
+            example: "John Doe"
+        - name: groupName
+          in: query
+          description: Group name (station code) to filter by
+          required: false
+          schema:
+            type: string
+            example: "ABC"
+        - name: state
+          in: query
+          description: State to filter by (maps to station codes)
+          required: false
+          schema:
+            type: string
+            example: "California"
+      responses:
+        '200':
+          description: Successful response with station statistics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StationResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /states:
+    get:
+      summary: Get state-level statistics
+      description: Retrieves aggregated statistics by state, including employee count, logged-in count, work duration, overtime, and associated station codes, optionally filtered by date, manager, or group name.
+      parameters:
+        - name: date
+          in: query
+          description: Date in DD-MM-YYYY format (defaults to current date)
+          required: false
+          schema:
+            type: string
+            example: "27-04-2025"
+        - name: manager
+          in: query
+          description: Full name of the manager to filter by
+          required: false
+          schema:
+            type: string
+            example: "John Doe"
+        - name: groupName
+          in: query
+          description: Group name (station code) to filter by
+          required: false
+          schema:
+            type: string
+            example: "ABC"
+      responses:
+        '200':
+          description: Successful response with state statistics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StateResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /managers:
+    get:
+      summary: Get list of managers
+      description: Retrieves a list of unique manager names from the database.
+      responses:
+        '200':
+          description: Successful response with manager names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ManagerResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /groups:
+    get:
+      summary: Get list of group names
+      description: Retrieves a list of unique group names (last 3 characters of group_name) from the database.
+      responses:
+        '200':
+          description: Successful response with group names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GroupResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /managers/best:
+    get:
+      summary: Get top-performing managers or employees
+      description: Retrieves the top 5 managers by login percentage or the top 5 employees by work duration under a specific manager, optionally filtered by date, group name, or state.
+      parameters:
+        - name: date
+          in: query
+          description: Date in DD-MM-YYYY format (defaults to current date)
+          required: false
+          schema:
+            type: string
+            example: "27-04-2025"
+        - name: manager
+          in: query
+          description: Full name of the manager to get top employees for
+          required: false
+          schema:
+            type: string
+            example: "John Doe"
+        - name: groupName
+          in: query
+          description: Group name (station code) to filter by
+          required: false
+          schema:
+            type: string
+            example: "ABC"
+        - name: state
+          in: query
+          description: State to filter by (maps to station codes)
+          required: false
+          schema:
+            type: string
+            example: "California"
+      responses:
+        '200':
+          description: Successful response with top managers or employees
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  oneOf:
+                    - $ref: '#/components/schemas/BestManagerResponse'
+                    - $ref: '#/components/schemas/BestEmployeeResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /managers/worst:
+    get:
+      summary: Get lowest-performing managers or employees
+      description: Retrieves the bottom 5 managers by login percentage or the bottom 5 employees by work duration under a specific manager, optionally filtered by date, group name, or state.
+      parameters:
+        - name: date
+          in: query
+          description: Date in DD-MM-YYYY format (defaults to current date)
+          required: false
+          schema:
+            type: string
+            example: "27-04-2025"
+        - name: manager
+          in: query
+          description: Full name of the manager to get bottom employees for
+          required: false
+          schema:
+            type: string
+            example: "John Doe"
+        - name: groupName
+          in: query
+          description: Group name (station code) to filter by
+          required: false
+          schema:
+            type: string
+            example: "ABC"
+        - name: state
+          in: query
+          description: State to filter by (maps to station codes)
+          required: false
+          schema:
+            type: string
+            example: "California"
+      responses:
+        '200':
+          description: Successful response with bottom managers or employees
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  oneOf:
+                    - $ref: '#/components/schemas/WorstManagerResponse'
+                    - $ref: '#/components/schemas/WorstEmployeeResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /historical:
+    get:
+      summary: Get historical statistics
+      description: Retrieves daily statistics over a date range, including total headcount, logged-in count, and login percentage, optionally filtered by manager, group name, or state.
+      parameters:
+        - name: startDate
+          in: query
+          description: Start date in YYYY-MM-DD format (defaults to current date)
+          required: false
+          schema:
+            type: string
+            example: "2025-04-01"
+        - name: endDate
+          in: query
+          description: End date in YYYY-MM-DD format (defaults to current date)
+          required: false
+          schema:
+            type: string
+            example: "2025-04-27"
+        - name: manager
+          in: query
+          description: Full name of the manager to filter by
+          required: false
+          schema:
+            type: string
+            example: "John Doe"
+        - name: groupName
+          in: query
+          description: Group name (station code) to filter by
+          required: false
+          schema:
+            type: string
+            example: "ABC"
+        - name: state
+          in: query
+          description: State to filter by (maps to station codes)
+          required: false
+          schema:
+            type: string
+            example: "California"
+      responses:
+        '200':
+          description: Successful response with historical statistics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HistoricalResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /unknown_group_names:
+    get:
+      summary: Get unknown group names
+      description: Retrieves group names whose station codes (last 3 characters) do not match any known station codes in States.csv, along with employee and logged-in counts.
+      responses:
+        '200':
+          description: Successful response with unknown group names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UnknownGroupResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    StatsResponse:
+      type: object
+      properties:
+        totalHeadCount:
+          type: integer
+          description: Total number of employees
+          example: 100
+        totalLoggedIn:
+          type: integer
+          description: Number of employees who logged in
+          example: 80
+        loggedInPercentage:
+          type: number
+          format: float
+          description: Percentage of employees who logged in
+          example: 80.0
+      required:
+        - totalHeadCount
+        - totalLoggedIn
+        - loggedInPercentage
+    StationResponse:
+      type: object
+      properties:
+        station:
+          type: string
+          description: Normalized station code
+          example: "ABC"
+        employeeCount:
+          type: integer
+          description: Number of employees at the station
+          example: 50
+        loggedInCount:
+          type: integer
+          description: Number of employees who logged in
+          example: 40
+        loggedInPercentage:
+          type: number
+          format: float
+          description: Percentage of employees who logged in
+          example: 80.0
+        totalWorkDuration:
+          type: number
+          format: float
+          description: Total work duration in hours
+          example: 320.5
+        overTimeCount:
+          type: integer
+          description: Number of employees with work duration > 8.5 hours
+          example: 10
+        state:
+          type: string
+          description: State associated with the station
+          example: "California"
+      required:
+        - station
+        - employeeCount
+        - loggedInCount
+        - loggedInPercentage
+        - totalWorkDuration
+        - overTimeCount
+        - state
+    StateResponse:
+      type: object
+      properties:
+        state:
+          type: string
+          description: State name
+          example: "California"
+        employeeCount:
+          type: integer
+          description: Number of employees in the state
+          example: 200
+        loggedInCount:
+          type: integer
+          description: Number of employees who logged in
+          example: 160
+        loggedInPercentage:
+          type: number
+          format: float
+          description: Percentage of employees who logged in
+          example: 80.0
+        totalWorkDuration:
+          type: number
+          format: float
+          description: Total work duration in hours
+          example: 1280.5
+        overTimeCount:
+          type: integer
+          description: Number of employees with work duration > 8.5 hours
+          example: 40
+        stationCodes:
+          type: array
+          description: List of station codes in the state
+          items:
+            type: string
+          example: ["ABC", "XYZ"]
+      required:
+        - state
+        - employeeCount
+        - loggedInCount
+        - loggedInPercentage
+        - totalWorkDuration
+        - overTimeCount
+        - stationCodes
+    ManagerResponse:
+      type: object
+      properties:
+        managerName:
+          type: string
+          description: Full name of the manager
+          example: "John Doe"
+      required:
+        - managerName
+    GroupResponse:
+      type: object
+      properties:
+        groupName:
+          type: string
+          description: Group name (station code, last 3 characters)
+          example: "ABC"
+      required:
+        - groupName
+    BestManagerResponse:
+      type: object
+      properties:
+        managerName:
+          type: string
+          description: Full name of the manager
+          example: "John Doe"
+        totalHeadCount:
+          type: integer
+          description: Total number of employees under the manager
+          example: 50
+        loggedInCount:
+          type: integer
+          description: Number of employees who logged in
+          example: 45
+        loggedInPercentage:
+          type: number
+          format: float
+          description: Percentage of employees who logged in
+          example: 90.0
+        role:
+          type: string
+          description: Role of the entity
+          example: "Manager"
+      required:
+        - managerName
+        - totalHeadCount
+        - loggedInCount
+        - loggedInPercentage
+        - role
+    BestEmployeeResponse:
+      type: object
+      properties:
+        employeeName:
+          type: string
+          description: Full name of the employee
+          example: "Jane Smith"
+        totalWorkDuration:
+          type: integer
+          description: Total work duration in minutes
+          example: 600
+        loggedInPercentage:
+          type: number
+          format: float
+          description: Login percentage (100 if logged in, 0 otherwise)
+          example: 100.0
+        role:
+          type: string
+          description: Role of the entity
+          example: "Employee"
+      required:
+        - employeeName
+        - totalWorkDuration
+        - loggedInPercentage
+        - role
+    WorstManagerResponse:
+      type: object
+      properties:
+        managerName:
+          type: string
+          description: Full name of the manager
+          example: "John Doe"
+        totalHeadCount:
+          type: integer
+          description: Total number of employees under the manager
+          example: 50
+        loggedInCount:
+          type: integer
+          description: Number of employees who logged in
+          example: 10
+        loggedInPercentage:
+          type: number
+          format: float
+          description: Percentage of employees who logged in
+          example: 20.0
+        role:
+          type: string
+          description: Role of the entity
+          example: "Manager"
+      required:
+        - managerName
+        - totalHeadCount
+        - loggedInCount
+        - loggedInPercentage
+        - role
+    WorstEmployeeResponse:
+      type: object
+      properties:
+        employeeName:
+          type: string
+          description: Full name of the employee
+          example: "Jane Smith"
+        totalWorkDuration:
+          type: integer
+          description: Total work duration in minutes
+          example: 0
+        loggedInPercentage:
+          type: number
+          format: float
+          description: Login percentage (100 if logged in, 0 otherwise)
+          example: 0.0
+        role:
+          type: string
+          description: Role of the entity
+          example: "Employee"
+      required:
+        - employeeName
+        - totalWorkDuration
+        - loggedInPercentage
+        - role
+    HistoricalResponse:
+      type: object
+      properties:
+        date:
+          type: string
+          description: Date in DD-MM-YYYY format
+          example: "27-04-2025"
+        totalHeadCount:
+          type: integer
+          description: Total number of employees
+          example: 100
+        loggedInCount:
+          type: integer
+          description: Number of employees who logged in
+          example: 80
+        loggedInPercentage:
+          type: number
+          format: float
+          description: Percentage of employees who logged in
+          example: 80.0
+      required:
+        - date
+        - totalHeadCount
+        - loggedInCount
+        - loggedInPercentage
+    UnknownGroupResponse:
+      type: object
+      properties:
+        group_name:
+          type: string
+          description: Group name not matching known station codes
+          example: "UNKNOWN"
+        employeeCount:
+          type: integer
+          description: Number of employees in the group
+          example: 10
+        loggedInCount:
+          type: integer
+          description: Number of employees who logged in
+          example: 5
+      required:
+        - group_name
+        - employeeCount
+        - loggedInCount
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Internal server error"
+      required:
+        - error
